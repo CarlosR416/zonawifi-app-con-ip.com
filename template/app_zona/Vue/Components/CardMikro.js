@@ -54,7 +54,7 @@ Vue.component('card-mikro', {
       this.connect()
     },
     template: '<transition name="fade"><div class="col-sm-6 col-lg-3 my-3">\
-                <div class="card pb-4 text-white " v-bind:class="baget">\
+                <div class="card pb-4 text-white " v-bind:class="baget" style="background: linear-gradient(45deg, #000000a1, transparent); border: none;">\
                   <div class="card-body pb-0 d-flex justify-content-between align-items-start">\
                     <div>\
                       <div class="fs-5 fw-semibold" v-bind:style="color">{{ '{{ mikro.descripcion }}' }}</div>\
