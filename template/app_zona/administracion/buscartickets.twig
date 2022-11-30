@@ -1,0 +1,204 @@
+{% extends "app_zona/administracion/index.conectados.twig" %}
+
+{% block table_content %}
+    <div class="wrapper d-flex flex-column min-vh-100 bg-light">
+      <header class="header header-sticky mb-4">
+        
+        <div class="container-fluid">
+          <button class="header-toggler px-md-0 me-md-3" type="button" onclick="coreui.Sidebar.getInstance(document.querySelector('#sidebar')).toggle()">
+            <svg class="icon icon-lg">
+              <use xlink:href="{{path_for('base')}}/plantilla/src/node_modules/@coreui/icons/sprites/free.svg#cil-menu"></use>
+            </svg>
+          </button>
+          <nav aria-label="breadcrumb">
+            <ol class="breadcrumb my-0 ms-2">
+              <li class="breadcrumb-item">
+                <!-- if breadcrumb is single--><span>Administracion</span>
+              </li>
+              <li class="breadcrumb-item "><span>Tickets</span></li>
+              <li class="breadcrumb-item active"><span>Buscar</span></li>
+            </ol>
+          </nav>
+        </div>
+      </header>
+        <div class="body flex-grow-1 px-3" id="app">
+          <table-host></table-host>
+        </div>
+      
+    </div>
+{% endblock %}
+
+{% block Vue_Interface %}
+
+<script>
+
+    Vue.component('table-host', {
+      data: function(){
+        return {
+          items: [],
+          DataSearch: "",
+          spinner_display: "display: none;",
+          message_display: "",
+          message: "Sin Resultados",
+        }
+      },
+      methods:{
+        TicketSearch: function(event){
+         
+         this.getTicket(this.DataSearch)
+
+        },
+        getTicket: function(val){
+
+          this.spinner_display = ""
+          this.message_display = "display: none;"  
+
+          fetch(document.location.origin+':3001/mikroticks/hotspot/ticket/'+val+"?token="+token_api)
+          .then(response => response.json())
+          .then(data => {
+            it = []
+
+            if(data.length>0){
+              data.forEach(function(element, key){
+                
+                it.push(element)
+                
+              })
+              
+            }else{
+              
+              this.message_display = ""
+            }
+            
+            //this.count_result = it.length
+            this.items = it
+            this.spinner_display = "display: none;"
+            
+            
+            
+          }, error => {
+            console.log(error)
+            
+            
+          })
+        }
+      },
+      template: '<div class="container-lg" id="container-fluid">\
+            <div class="row">\
+                <div class="card mb-0" style="padding: 0;">\
+                    <div class="card-header">\
+                      <div class="input-group mb-3">\
+                        <input type="text" class="form-control" placeholder="Ingrese Ticket" aria-label="Ingrese Ticket" aria-describedby="input-buscar" v-model="DataSearch">\
+                        <button class="btn btn-outline-secondary" type="button" id="button-bucar" v-on:click="TicketSearch">Buscar</button>\
+                      </div>\
+                    </div>\
+                    <div class="card-body" style="padding: 0;" >\
+                        <div class="table-responsive" style="min-height: 220px;">\
+                          <table class="table border mb-0" >\
+                            <thead class="table-light fw-semibold">\
+                                <tr class="align-middle">\
+                                <th class="text-center" >Ticket</th>\
+                                <th>Descripción</th>\
+                                <th class="text-center"> Total: </th>\
+                                </tr>\
+                            </thead>\
+                            <tbody>\
+                            <item-host\
+                              v-for="item in items"\
+                              v-bind:key="item.address"\
+                              v-bind:datos="item"\
+                            ></item-host>\
+                            </tbody>\
+                          </table>\
+                          <div class="d-flex justify-content-center">\
+                            <div class="spinner-border m-5 text-secondary" role="status" v-bind:style="spinner_display">\
+                              <span class="visually-hidden">Loading...</span>\
+                            </div>\
+                            <div role="alert" v-bind:style="message_display">\
+                              <p class="m-5">{{ '{{message}}' }}</p>\
+                            </div>\
+                          </div>\
+                        </div>\
+                    </div>\
+                </div>\
+            </div>\
+          </div>'
+    })
+
+    Vue.component('item-host', {
+      props: ['datos'],
+      data: function(){
+        return {
+          
+        } 
+      },
+      methods: {
+        time_available: function(){
+
+          if(this.datos.comment){
+            switch (this.datos.comment.substr(0, 2)){
+              case 'FV':
+                
+                return MikrotickTimeToUsertime(this.datos.comment.substr(36), 0)
+                
+              break
+
+              case 'Cd':
+                return MikrotickTimeToUsertime(this.datos.uptime, 0)
+              break
+
+              default:
+                return "Indefinido"
+              break;
+            }
+          }
+
+        },
+        time_expires: function(){
+            var ReTime = "Indefinido"
+
+            if(this.datos.comment && (this.datos.comment.substr(0, 2) == 'FV')){
+
+                ReTime  = GetDateOfTimestamp(this.datos.comment.substr(5, 10));
+
+            }else if(this.datos.comment && this.datos.comment.substr(0, 2) == 'Cd'){
+
+                var tempTime = this.datos.comment.substr(6)
+                if(this.datos.comment == "Cdate - 0"){
+                  ReTime  = "Sin actualizar"
+                }else{
+                  ReTime  = GetDateOfTimestamp(tempTime);
+                }
+
+            }
+            
+            return ReTime
+        }
+      },
+      template: '<tr class="align-middle">\
+                      <td class="text-center">\
+                          <div ><b>{{'{{datos.name}}'}}</b></div>\
+                          <div class="small text-medium-emphasis"></div>\
+                      </td>\
+                      <td>\
+                          <div class="small text-medium-emphasis"><b>Consumido:</b> {{'{{ time_available() }}'}} </div>\
+                          <div class="small text-medium-emphasis"><b>Caduca:</b> {{'{{ time_expires() }}'}} </div>\
+                      </td>\
+                      <td class="text-center">\
+                          <div class="dropdown">\
+                          <button class="btn btn-transparent p-0" type="button" data-coreui-toggle="dropdown" aria-haspopup="true" aria-expanded="false">\
+                              <svg class="icon">\
+                              <use xlink:href="{{path_for('base')}}plantilla/src/node_modules/@coreui/icons/sprites/free.svg#cil-options"></use>\
+                              </svg>\
+                          </button>\
+                          <div class="dropdown-menu dropdown-menu-end" >\
+                            <a class="dropdown-item text-danger" href="#">Desconectar</a>\
+                          </div>\
+                          </div>\
+                      </td>\
+                  </tr>'
+    })
+
+</script>
+
+{% endblock %}
